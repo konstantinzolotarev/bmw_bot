@@ -1,0 +1,15 @@
+defmodule Ibus.MessageTest do
+  use ExUnit.Case
+  doctest Ibus.Message
+
+  test "raw() have to add length and xor" do
+    msg = %Ibus.Message{src: <<0x68>>, dst: <<0x18>>, msg: <<0x0A, 0x00>>}
+    assert Ibus.Message.raw(msg) == <<0x68, 0x04, 0x18, 0x0A, 0x00, 0x7E>>
+  end
+
+  test "valid?() shoudl validate correct messages" do
+    assert Ibus.Message.valid?(<<0x68, 0x04, 0x18, 0x0A, 0x00, 0x7E>>)
+    refute Ibus.Message.valid?(<<0x68, 0x04, 0x18, 0x0A, 0x00, 0x7A>>)
+    refute Ibus.Message.valid?(<<0x68, 0x05, 0x18, 0x0A, 0x00, 0x7E>>)
+  end
+end
