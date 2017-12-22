@@ -56,9 +56,22 @@ defmodule Ibus.Message do
   This message should be sent into Ibus can and will be normally received by car
   """
   @spec raw(Ibus.Message.t) :: binary
-  def raw(%Ibus.Message{src: src, dst: dst, msg: msg} = message) do
+  def raw(%__MODULE__{src: src, dst: dst, msg: msg} = message) do
     full = src <> <<len(message)>> <> dst <> msg
     full <> <<xor(full)>>
   end
 
+  @doc """
+  Check if given raw message is valid Ibus message
+  
+  Function is really usefull for scanning Ibus can from car.
+  """
+  @spec valid?(binary) :: boolean
+  def valid?(<< src :: size(8), lng :: size(8), dst :: size(8), msg :: binary >> = rawMsg) do
+    # msg will contain xor byte aswell and we have to remove it
+    msg = :binary.part(msg, 0, byte_size(msg) - 1)
+    rawMsg == %__MODULE__{src: <<src>>, dst: <<dst>>, msg: msg}
+    |> raw()
+  end
+  def valid?(_), do: false
 end
