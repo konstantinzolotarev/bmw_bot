@@ -75,8 +75,9 @@ defmodule Ibus.Reader do
     {:noreply, state}
   end
 
-  # Process messages that were received by module
-  defp process_message(msg, %State{messages: messages, buffer: buffer} = state) do
+  # Process buffer that was received by module
+  # And try to fetch all messages from it
+  defp process_new_message(msg, %State{messages: messages, buffer: buffer} = state) do
     new_buff = buffer <> msg
     case byte_size(new_buff) do
       x when x in 0..5 -> %State{state | buffer: new_buff}
@@ -87,15 +88,38 @@ defmodule Ibus.Reader do
 
   # Will try to fetch a valid message from buffer in state
   defp fetch_messages(%State{messages: messages, buffer: buffer} = state) do
-  
+    case process_buffer(buffer) do
+      {:error, _} -> %State{state | buffer: ""}
+      {:ok, rest, []} -> state
+      {:ok, rest, new_messages} -> %State{state | messages: messages ++ new_messages, buffer: rest}
+    end
   end
+
+  # Function will process given binary buffer and fetch all available messages
+  # from buffer
+  defp process_buffer(buffer, messages \\ [])
+  defp process_buffer("", messages), do: {:ok, "", messages}
+  defp process_buffer(buffer, messages) when is_binary(buffer) do
+    with true <- byte_size(buffer) >= 5,
+         {:ok, msg, rest} <- pick_message(buffer) do
+
+          process_buffer(rest, messages ++ [msg])
+    else
+      false -> {:ok, buffer, messages}
+      {:error, _} -> 
+        buffer
+        |> :binary.part(1, byte_size(buffer) - 1)
+        |> process_buffer(messages)
+    end
+  end
+  defp process_buffer(_, _), do: {:error, "Wrong input buffer passed"}
 
   # Will try to get message in beginning of given buffer
   # On success funciton will return `{:ok, message, rest_of_buffer}`
   # otherwise it will return `{:error, term}`
   #
   # Note that rest of buffer might be an empty binary
-  defp pick_message(<< src :: size(8), lng :: size(8), tail :: binary >> = buffer) do
+  defp pick_message(<< src :: size(8), lng :: size(8), tail :: binary >>) do
     with true          <- byte_size(tail) >= lng,
          msg           <- :binary.part(tail, 0, lng),
          full          <- <<src>> <> <<lng>> <> msg,
