@@ -133,8 +133,14 @@ defmodule Ibus.Reader do
   end
   
   # Send list of messages one by one to controlling process
-  defp send_messages(%State{messages: messages, controlling_process: cp}) do
+  defp send_messages(%State{is_active: false} = state), do: {:ok, state}
+  defp send_messages(%State{messages: []} = state), do: {:ok, state}
+  defp send_messages(%State{controlling_process: nil} = state), do: {:ok, state}
+  defp send_messages(%State{messages: messages, controlling_process: pid, is_active: true} = state) do
+    messages
+    |> Enum.each(&(send(pid, {:message, &1})))
 
+    {:ok, %State{state | messages: []}}
   end
 
 end
