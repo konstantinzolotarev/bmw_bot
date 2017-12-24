@@ -29,21 +29,6 @@ defmodule Ibus.Message do
     end
   end
 
-  # Calculate xor for message
-  # It's a last byte for ibus message 
-  defp xor(msg) when is_binary(msg) do
-    msg
-    |> :binary.bin_to_list()
-    |> Enum.reduce(0, fn(x, acc) -> Bitwise.bxor(acc, x) end)
-  end
-  defp xor(_), do: <<0x00>>
-
-  # Calculate length of Ibus message
-  # Note that in Ibus protocol source of mesage should not be calculated in length
-  defp len(%__MODULE__{dst: dst, msg: msg}) do
-    byte_size(dst <> msg) + 1
-  end
-
   @doc """
   Create a raw binary message with length byte and last XOR byte as well.
 
@@ -67,11 +52,49 @@ defmodule Ibus.Message do
   Function is really usefull for scanning Ibus can from car.
   """
   @spec valid?(binary) :: boolean
-  def valid?(<< src :: size(8), lng :: size(8), dst :: size(8), msg :: binary >> = rawMsg) do
-    # msg will contain xor byte aswell and we have to remove it
-    msg = :binary.part(msg, 0, byte_size(msg) - 1)
-    rawMsg == %__MODULE__{src: <<src>>, dst: <<dst>>, msg: msg}
-    |> raw()
+  def valid?(<< src :: size(8), lng :: size(8), dst :: size(8), msg :: binary >> = rawMsg) when is_binary(rawMsg) do
+    case byte_size(<<dst>> <> msg) == lng do
+      false -> false
+      true ->
+        # msg will contain xor byte aswell and we have to remove it
+        msg = :binary.part(msg, 0, byte_size(msg) - 1)
+        rawMsg ==  %__MODULE__{src: <<src>>, dst: <<dst>>, msg: msg} |> raw()
+    end
   end
+
   def valid?(_), do: false
+
+  @doc """
+  Will try to create a new `Ibus.Message.t` from given raw binary message
+  """
+  @spec parse(binary) :: {:ok, Ibus.Message.t} | {:error, term}
+  def parse(<< src :: size(8), _ :: size(8), dst :: size(8), msg :: binary >> = raw) do
+    case valid?(raw) do
+      false -> {:error, "Wrong message passed for parsing"}
+      true ->
+           # msg will contain xor byte aswell and we have to remove it
+           msg = :binary.part(msg, 0, byte_size(msg) - 1)
+           {:ok, %__MODULE__{src: <<src>>, dst: <<dst>>, msg: msg}}
+    end
+  end
+
+  def parse(_), do: {:error, "Wrong message passed"}
+
+
+  # Calculate xor (checksum) for message
+  # It's a last byte for ibus message 
+  defp xor(msg) when is_binary(msg) do
+    msg
+    |> :binary.bin_to_list()
+    |> Enum.reduce(0, fn(x, acc) -> Bitwise.bxor(acc, x) end)
+  end
+  defp xor(_), do: <<0x00>>
+
+  # Calculate length of Ibus message
+  # Note that in Ibus protocol source of mesage should not be calculated in length
+  defp len(%__MODULE__{dst: dst, msg: msg}) do
+    byte_size(dst <> msg) + 1
+  end
+  defp len(_), do: 0
+
 end
