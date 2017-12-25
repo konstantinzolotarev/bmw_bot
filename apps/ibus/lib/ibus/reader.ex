@@ -42,7 +42,7 @@ defmodule Ibus.Reader do
   """
   @spec write(GenServer.server, binary) :: :ok | {:error, term}
   def write(pid, msg) do
-    GenServer.cast(pid, {:message, msg})
+    send(pid, {:message, msg})
   end
 
 
@@ -65,13 +65,7 @@ defmodule Ibus.Reader do
   """
   @spec handle_info({:message, binary}, State.t) :: {:noreply, State.t} | {:error, term}
   def handle_info({:message, msg}, state) do
-  
-    {:noreply, state}
-  end
-
-  # handle message 
-  def handle_cast({:message, msg}, state) do
-
+    new_state = case process_new_message(msg, state)
     {:noreply, state}
   end
 
