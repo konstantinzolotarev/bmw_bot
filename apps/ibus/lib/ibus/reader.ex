@@ -32,7 +32,16 @@ defmodule Ibus.Reader do
   @spec start_link([term]) :: {:ok, pid} | {:error, term}
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, %State{}, opts)
 
-  @spec read(pid) :: {:ok, [Ibus.Message.t]} | {:error, term}
+  @doc """
+  Read list of available messages in reader.
+  Note that list of messages might be empty if nothing was parsed.
+
+  ```elixir
+  iex> Reader.read(pid)
+  []
+  ```
+  """
+  @spec read(pid) :: [Ibus.Message.t] | {:error, term}
   def read(pid), do: GenServer.call(pid, :get_messages)
 
   @doc """
