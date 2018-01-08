@@ -32,10 +32,8 @@ defmodule Ibus.Reader do
   @spec start_link([term]) :: {:ok, pid} | {:error, term}
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, %State{}, opts)
 
-  @spec read() :: {:ok, [Ibus.Message.t]} | {:error, term}
-  def read() do
-    []
-  end
+  @spec read(pid) :: {:ok, [Ibus.Message.t]} | {:error, term}
+  def read(pid), do: GenServer.call(pid, :get_messages)
 
   @doc """
   Send data to Module for processing
@@ -67,6 +65,11 @@ defmodule Ibus.Reader do
   def handle_info({:message, msg}, state) do
     new_state = process_new_message(msg, state) 
     {:noreply, new_state}
+  end
+
+  @doc false
+  def handle_call(:get_messages, _from, %State{messages: messages} = state) do
+    {:reply, messages, %State{state | messages: []}}
   end
 
   # Process buffer that was received by module
