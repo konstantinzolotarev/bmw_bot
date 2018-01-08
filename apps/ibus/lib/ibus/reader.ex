@@ -65,26 +65,27 @@ defmodule Ibus.Reader do
   """
   @spec handle_info({:message, binary}, State.t) :: {:noreply, State.t} | {:error, term}
   def handle_info({:message, msg}, state) do
-    new_state = case process_new_message(msg, state)
-    {:noreply, state}
+    new_state = process_new_message(msg, state) 
+    {:noreply, new_state}
   end
 
   # Process buffer that was received by module
   # And try to fetch all messages from it
-  defp process_new_message(msg, %State{messages: messages, buffer: buffer} = state) do
+  defp process_new_message("", state), do: state
+  defp process_new_message(msg, %State{buffer: buffer} = state) when is_binary(msg) do
     new_buff = buffer <> msg
     case byte_size(new_buff) do
-      x when x in 0..5 -> %State{state | buffer: new_buff}
-      x -> fetch_messages(%State{state | buffer: new_buff})
-      _ -> state
+      x when x > 5 -> fetch_messages(%State{state | buffer: new_buff})
+      _ -> %State{state | buffer: new_buff}
     end
   end
+  defp process_new_message(_, state), do: state
 
   # Will try to fetch a valid message from buffer in state
   defp fetch_messages(%State{messages: messages, buffer: buffer} = state) do
     case process_buffer(buffer) do
       {:error, _} -> %State{state | buffer: ""}
-      {:ok, rest, []} -> state
+      {:ok, _rest, []} -> state
       {:ok, rest, new_messages} -> %State{state | messages: messages ++ new_messages, buffer: rest}
     end
   end
