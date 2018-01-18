@@ -10,6 +10,8 @@ defmodule Ibus.Application do
     children = [
       # Starts a worker by calling: Ibus.Worker.start_link(arg)
       # {Ibus.Worker, arg},
+      {ExIbus.Reader, name: ExIbus.Reader},
+      {Ibus, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
