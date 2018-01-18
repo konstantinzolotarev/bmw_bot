@@ -1,4 +1,4 @@
-defmodule Ibus.Mixfile do
+defmodule Ibus.MixProject do
   use Mix.Project
 
   def project do
@@ -9,8 +9,8 @@ defmodule Ibus.Mixfile do
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
       lockfile: "../../mix.lock",
-      elixir: "~> 1.5",
-      start_permanent: Mix.env == :prod,
+      elixir: "~> 1.6",
+      start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
   end
@@ -18,7 +18,8 @@ defmodule Ibus.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      mod: {Ibus.Application, []}
     ]
   end
 
