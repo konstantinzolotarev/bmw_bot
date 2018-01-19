@@ -10,13 +10,12 @@ defmodule Ibus.Application do
     children = [
       # Starts a worker by calling: Ibus.Worker.start_link(arg)
       # {Ibus.Worker, arg},
-      {ExIbus.Reader, name: ExIbus.Reader},
-      {Ibus, []}
+      Ibus.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Ibus.Supervisor]
+    opts = [strategy: :one_for_one, name: Ibus.AppSupervisor]
     Supervisor.start_link(children, opts)
   end
 end
