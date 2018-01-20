@@ -29,4 +29,4 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 #
-config :ibus, interface_name: "/dev/cu.Bluetooth-Incoming-Port"
+config :ibus, interface_name: "/dev/cu.SLAB_USBtoUART"

@@ -23,14 +23,14 @@ defmodule Ibus.Reader do
   end
 
   def handle_info({:nerves_uart, _, data}, state) when is_binary(data) do
-    IO.inspect(data)
     ExIbus.Reader.write(Ibus.MessageReader, data)
     {:noreply, state}
   end
   def handle_info({:nerves_uart, _, _}, state), do: {:noreply, state}
 
-  def handle_info({:ex_ibus, @name, data}, state) do
+  def handle_info({:ex_ibus, _name, data}, state) do
     IO.inspect(data)
+    {:noreply, state}
   end
 
 
