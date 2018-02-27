@@ -1,5 +1,4 @@
 defmodule Ibus.Devices do
-
   @moduledoc """
   List of BMW device addresses
   """
@@ -21,5 +20,4 @@ defmodule Ibus.Devices do
   def mid, do: <<0xC0>>
   def tel, do: <<0xC8>>
   def broadcast, do: <<0xFF>>
-
 end

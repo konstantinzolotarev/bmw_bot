@@ -7,8 +7,11 @@ defmodule Ibus.Supervisor do
 
   def init(:ok) do
     children = [
-      {Ibus.Reader, []}
+      {Ibus.Router, []},
+      {Ibus.UART, []},
+      {Ibus.CD, []}
     ]
+
     Supervisor.init(children, strategy: :one_for_one)
   end
 end

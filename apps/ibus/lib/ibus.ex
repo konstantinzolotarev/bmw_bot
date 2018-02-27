@@ -1,3 +1,2 @@
 defmodule Ibus do
-
 end
