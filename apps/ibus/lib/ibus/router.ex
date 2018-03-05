@@ -39,10 +39,11 @@ defmodule Ibus.Router do
 
   def handle(_, _), do: :error
 
-  def notify(%ExIbus.Message{} = msg) do
-    IO.inspect(msg)
-    broadcast(msg)
-  end
+  @doc """
+  Notifies all listeners with a received message
+  """
+  @spec notify(ExIbus.Message.t()) :: :ok | {:error, term}
+  def notify(%ExIbus.Message{} = msg), do: broadcast(msg)
 
   def notify(_), do: :ok
 

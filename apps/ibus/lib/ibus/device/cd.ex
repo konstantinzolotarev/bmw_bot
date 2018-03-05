@@ -1,4 +1,4 @@
-defmodule Ibus.CD do
+defmodule Ibus.Device.CD do
   use GenServer
   alias Ibus.Devices
 

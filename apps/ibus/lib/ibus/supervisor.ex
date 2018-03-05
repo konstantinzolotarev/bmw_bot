@@ -9,7 +9,7 @@ defmodule Ibus.Supervisor do
     children = [
       {Ibus.Router, []},
       {Ibus.UART, []},
-      {Ibus.CD, []}
+      {Ibus.Device.CD, []}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
