@@ -1,5 +1,6 @@
 defmodule Ibus.UART do
   use GenServer
+  require Logger
 
   @name Application.get_env(:ibus, :interface_name)
 
@@ -15,12 +16,15 @@ defmodule Ibus.UART do
   @doc false
   def init(state) do
     {:ok, _pid} = Nerves.UART.start_link(name: Ibus.Serial)
+    Logger.debug("#{__MODULE__}: Start serial port")
     :ok = Nerves.UART.open(Ibus.Serial, @name, active: true, speed: 9600, parity: :even)
+    Logger.debug("#{__MODULE__}: Open serial connection")
     {:ok, _pid} = ExIbus.Reader.start_link(name: Ibus.MessageReader)
-
+    Logger.debug("#{__MODULE__}: Start serial reader")
     :ok =
       ExIbus.Reader.configure(Ibus.MessageReader, active: true, listener: __MODULE__, name: @name)
 
+    Logger.debug("#{__MODULE__}: Finish configure")
     {:ok, %State{}}
   end
 
@@ -53,6 +57,7 @@ defmodule Ibus.UART do
   Handle message from `ExIbus.Reader` combined and working.
   """
   def handle_info({:ex_ibus, _name, data}, state) do
+    # Logger.debug("#{__MODULE__}: Handled data #{inspect(data)}")
     Ibus.Router.notify(data)
     {:noreply, state}
   end

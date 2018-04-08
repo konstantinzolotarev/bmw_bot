@@ -54,7 +54,7 @@ defmodule Ibus.Router do
   defp join_pid(dst, pid) do
     has =
       dst
-      |> :ps2.get_members()
+      |> :pg2.get_members()
       |> Enum.member?(pid)
 
     unless has do

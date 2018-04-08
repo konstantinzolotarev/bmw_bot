@@ -4,13 +4,13 @@ defmodule Ibus.Device.Radio do
 
   Also has list of functions for triggering functions
   """
-  use GenServer
+  # use GenServer
+  alias Ibus.Devices
 
   defmodule Message do
-    
+
+
   end
 
-  def send_text(text), do: :ok 
-
-  def clear_display(), do: :ok
+  
 end
