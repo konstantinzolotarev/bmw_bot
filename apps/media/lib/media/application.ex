@@ -1,4 +1,4 @@
-defmodule Audio.Application do
+defmodule Media.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,13 +8,13 @@ defmodule Audio.Application do
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
-      # Starts a worker by calling: Audio.Worker.start_link(arg)
-      # {Audio.Worker, arg},
+      # Starts a worker by calling: Media.Worker.start_link(arg)
+      {Media.MplayerPort, ""}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Audio.Supervisor]
+    opts = [strategy: :one_for_one, name: Media.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

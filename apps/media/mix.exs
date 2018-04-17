@@ -1,9 +1,9 @@
-defmodule Audio.MixProject do
+defmodule Media.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :audio,
+      app: :media,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -19,7 +19,7 @@ defmodule Audio.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {Audio.Application, []}
+      mod: {Media.Application, []}
     ]
   end
 
