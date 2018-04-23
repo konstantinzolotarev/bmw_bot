@@ -5,6 +5,7 @@ defmodule Media.MplayerPort do
   use GenServer
 
   alias Media.File.Scaner
+  alias Media.Song
   require Logger
 
   @player "mplayer"
@@ -31,10 +32,26 @@ defmodule Media.MplayerPort do
             port: port,
             monitor_ref: reference(),
             status: status(),
-            playlist: binary
+            playlist: binary,
+            playing: Media.Song.t()
           }
 
-    defstruct path: "", port: nil, monitor_ref: nil, status: :stoped, playlist: ""
+    defstruct path: "", port: nil, monitor_ref: nil, status: :stoped, playlist: "", playing: nil
+
+    @doc """
+    Reset state remove all playing info, clear path and reset monitors
+    """
+    @spec reset(Media.MplayerPort.State.t()) :: Media.MplayerPort.State.t()
+    def reset(%__MODULE__{} = state) do
+      %__MODULE__{
+        state
+        | port: nil,
+          monitor_ref: nil,
+          status: :stoped,
+          playlist: "",
+          playing: nil
+      }
+    end
   end
 
   @doc false
@@ -66,21 +83,28 @@ defmodule Media.MplayerPort do
 
       playlist when is_binary(playlist) ->
         Logger.debug("#{__MODULE__}: Everything good. Library loaded")
+        # Start playing
+        play()
         {:reply, :ok, %State{state | path: path, playlist: playlist}}
     end
   end
 
-  def handle_cast(:play, %State{port: nil} = state) do
-    state
-    |> start_port()
-    |> load_meta_info()
-  end
+  # Handling playing now info
+  def handle_call(:playing_now, _from, %State{playing: nil} = state),
+    do: {:reply, "Nothing is playing", state}
+
+  def handle_call(:playing_now, _from, %State{playing: %Song{} = song} = state),
+    do: {:reply, Song.display(song), state}
+
+  # Handle play command
+  def handle_cast(:play, %State{port: nil} = state), do: start_port(state)
 
   def handle_cast(:play, %State{status: :paused} = state),
     do: send_command(%State{state | status: :playing}, "pause")
 
   def handle_cast(:play, state), do: {:noreply, state}
 
+  # Handle pause command
   def handle_cast(:pause, %State{status: :playing} = state),
     do: send_command(%State{state | status: :paused}, "pause")
 
@@ -89,16 +113,28 @@ defmodule Media.MplayerPort do
 
   def handle_cast(:pause, %State{status: :stoped} = state), do: {:noreply, state}
 
+  # Handle next command
   def handle_cast(:next, state), do: send_command(state, "pt_step 1")
 
+  # Handle prev command
   def handle_cast(:prev, state), do: send_command(state, "pt_step -1")
 
-  def handle_cast(:stop, state), do: send_command(%State{state | status: :stoped}, "stop")
+  # Handle stop command
+  def handle_cast(:stop, state),
+    do: send_command(%State{state | status: :stoped, playing: nil}, "stop")
 
+  # Handle quit command
+  def handle_cast(:quit, state),
+    do: send_command(%State{state | status: :stoped, playing: nil}, "quit")
+
+  # Handle mute command. Note that this command should not be used from here
+  # Use mute on your device
   def handle_cast(:mute, state), do: send_command(state, "mute")
 
+  # Handle seek forward
   def handle_cast(:seek_forward, state), do: send_command(state, "seek +10 0")
 
+  # Handle seek backward
   def handle_cast(:seek_backward, state), do: send_command(state, "seek -10 0")
 
   # Run set of commands to find out meta information about song
@@ -126,7 +162,7 @@ defmodule Media.MplayerPort do
   def handle_info({:DOWN, _ref, :port, _port, :normal}, %State{monitor_ref: ref} = state) do
     Logger.debug("#{__MODULE__}: Mplayer exited normally")
     Port.demonitor(ref)
-    {:noreply, %State{state | port: nil, monitor_ref: nil, status: :stoped}}
+    {:noreply, State.reset(state)}
   end
 
   # Handle mplayer stoped with non normal reason
@@ -159,59 +195,63 @@ defmodule Media.MplayerPort do
 
   def rescan(_), do: {:error, "Wrong path passed"}
 
+  @spec play() :: :ok
   def play(), do: GenServer.cast(__MODULE__, :play)
 
+  @spec pause() :: :ok
   def pause(), do: GenServer.cast(__MODULE__, :pause)
 
+  @spec stop() :: :ok
   def stop(), do: GenServer.cast(__MODULE__, :stop)
 
+  @doc false
+  def quit(), do: GenServer.cast(__MODULE__, :quit)
+
+  @spec next() :: :ok
   def next(), do: GenServer.cast(__MODULE__, :next)
 
+  @spec prev() :: :ok
   def prev(), do: GenServer.cast(__MODULE__, :prev)
 
+  @doc false
   def mute(), do: GenServer.cast(__MODULE__, :mute)
 
+  @spec seek_forward() :: :ok
   def seek_forward(), do: GenServer.cast(__MODULE__, :seek_forward)
 
+  @spec seek_backward() :: :ok
   def seek_backward(), do: GenServer.cast(__MODULE__, :seek_backward)
+
+  @doc """
+  Get information about playing now song
+  """
+  @spec playing_now() :: binary
+  def playing_now(), do: GenServer.call(__MODULE__, :playing_now)
 
   #
   # Private functions
   #
 
-  defp handle_data(<<"ANS_FILENAME='", data::binary>>, state) do
-    Logger.debug(data)
-    {:noreply, state}
+  # Handle meta info about playing song
+  defp handle_data(<<"ANS_FILENAME='", data::binary>> = msg, state) do
+    Logger.debug(msg)
+
+    meta =
+      msg
+      |> String.split("'ANS_", trim: true)
+      |> Enum.map(&parse_meta_info/1)
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+      |> Enum.into(%{})
+
+    song = struct!(Song, meta)
+    Logger.debug("#{__MODULE__}: Loaded song meta: #{Song.display(song)}")
+    {:noreply, %State{state | playing: song}}
   end
 
-  # defp handle_data(<<"ANS_META_TITLE='", data::binary>>, state) do
-  #   Logger.debug(data)
-  #   {:noreply, state}
-  # end
-  #
-  # defp handle_data(<<"ANS_META_ALBUM='", data::binary>>, state) do
-  #   Logger.debug(data)
-  #   {:noreply, state}
-  # end
-  #
-  # defp handle_data(<<"ANS_META_ARTIST='", data::binary>>, state) do
-  #   Logger.debug(data)
-  #   {:noreply, state}
-  # end
-  #
-  # defp handle_data(<<"ANS_META_TRACK='", data::binary>>, state) do
-  #   Logger.debug(data)
-  #   {:noreply, state}
-  # end
-  #
-  # defp handle_data(<<"ANS_META_YEAR='", data::binary>>, state) do
-  #   Logger.debug(data)
-  #   {:noreply, state}
-  # end
-
-  defp handle_data(<<"Playing ", _name::binary>>, state) do
-    Logger.debug("#{__MODULE__}: Playing new song")
-    load_meta_info(state)
+  defp handle_data(<<"Playing ", name::binary>>, state) do
+    Logger.debug("#{__MODULE__}: Playing new song #{name}")
+    load_meta_info(%State{state | playing: nil})
   end
 
   # handle Mplayer exit
@@ -222,8 +262,24 @@ defmodule Media.MplayerPort do
 
   defp handle_data(_, state), do: {:noreply, state}
 
+  # Handle meta information from mplayer
+  defp parse_meta_info(<<"ANS_FILENAME='", file::binary>>), do: [filename: file |> cleanup()]
+  defp parse_meta_info(<<"META_ALBUM='", name::binary>>), do: [album: name |> cleanup()]
+  defp parse_meta_info(<<"META_ARTIST='", name::binary>>), do: [artist: name |> cleanup()]
+  defp parse_meta_info(<<"META_TITLE='", name::binary>>), do: [title: name |> cleanup()]
+  defp parse_meta_info(<<"META_TRACK='", name::binary>>), do: [track: name |> cleanup()]
+  defp parse_meta_info(<<"META_YEAR='", name::binary>>), do: [year: name |> cleanup()]
+  defp parse_meta_info(_), do: nil
+
+  # Cleanup title
+  defp cleanup(data) when is_binary(data), do: data |> String.replace("'", "") |> String.trim()
+
+  # Handle noreply
+  defp load_meta_info({:noreply, state}), do: load_meta_info(state)
+
   # Send set of commands for fetching metadata
   defp load_meta_info(state) do
+    Logger.info("Called meta info")
     send_command(state, "get_file_name")
     send_command(state, "get_meta_album")
     send_command(state, "get_meta_artist")
@@ -235,7 +291,7 @@ defmodule Media.MplayerPort do
   end
 
   # Create new port for mplayer executable
-  defp start_port(%State{playlist: ""} = state), do: state
+  defp start_port(%State{playlist: ""} = state), do: {:noreply, state}
 
   defp start_port(%State{playlist: playlist} = state) do
     executable = System.find_executable(@player)
@@ -247,7 +303,7 @@ defmodule Media.MplayerPort do
       ])
 
     ref = Port.monitor(port)
-    %State{state | port: port, monitor_ref: ref}
+    {:noreply, %State{state | port: port, monitor_ref: ref, status: :playing}}
   end
 
   # Send command to mplayer
