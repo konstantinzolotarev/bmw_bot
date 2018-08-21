@@ -1,19 +1,19 @@
 defmodule Ibus.Router do
-  use GenServer
+  use GetServer
 
   @doc false
   def start_link(_) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+    GetServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
   @doc false
-  def init(_), do: {:ok, []}
+  def init(_), do: {:ok, %{}}
 
   #
   # Callbacks
   #
 
-  def handle_cast({:handle, dst, pid}, list) when is_binary(dst) do
+  def handle_cast({:subscribe, dst, pid}, list) when is_binary(dst) do
     case Enum.member?(list, dst) do
       true ->
         join_pid(dst, pid)
@@ -26,6 +26,10 @@ defmodule Ibus.Router do
     end
   end
 
+  def handle_cast({:notify, %Message{dst: dst} = msg}, state) do
+    {:noreply, state}
+  end
+
   #
   # Client function
   #
@@ -33,36 +37,23 @@ defmodule Ibus.Router do
   @doc """
   Add a handler for messages by it's destination
   """
-  @spec handle(binary, pid) :: :ok
-  def handle(dst, pid) when is_binary(dst),
-    do: GenServer.cast(__MODULE__, {:handle, dst, pid})
+  @spec subscribe(binary, pid) :: :ok
+  def subscribe(dst, pid) when is_binary(dst),
+    do: GenServer.cast(__MODULE__, {:subscribe, dst, pid})
 
-  def handle(_, _), do: :error
+  def subscribe(_, _), do: :error
 
   @doc """
   Notifies all listeners with a received message
   """
   @spec notify(ExIbus.Message.t()) :: :ok | {:error, term}
-  def notify(%ExIbus.Message{} = msg), do: broadcast(msg)
+  def notify(%ExIbus.Message{} = msg), do: GenServer.cast(__MODULE__, {:notify, msg})
 
   def notify(_), do: :ok
 
   #
   # Private functions
   #
-
-  defp join_pid(dst, pid) do
-    has =
-      dst
-      |> :pg2.get_members()
-      |> Enum.member?(pid)
-
-    unless has do
-      :ok = :pg2.join(dst, pid)
-    end
-
-    :ok
-  end
 
   defp broadcast(%ExIbus.Message{dst: dst} = msg) do
     case :pg2.get_members(dst) do

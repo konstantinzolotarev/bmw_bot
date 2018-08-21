@@ -85,7 +85,7 @@ defmodule Ibus.Device.CD do
   end
 
   def init(_state) do
-    Ibus.Router.handle(@cdc, self())
+    Ibus.Router.subscribe(@cdc, self())
     Ibus.Device.CD.send_announce()
     {:ok, []}
   end

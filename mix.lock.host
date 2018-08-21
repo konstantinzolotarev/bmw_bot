@@ -1,4 +1,5 @@
 %{
-  "distillery": {:hex, :distillery, "1.5.2", "eec18b2d37b55b0bcb670cf2bcf64228ed38ce8b046bb30a9b636a6f5a4c0080", [:mix], [], "hexpm"},
-  "nerves": {:hex, :nerves, "0.11.0", "631693062f2fdad92b2f9d34ac7c230bbda985276b5cd99e6beff7c1a0545326", [:mix], [{:distillery, "~> 1.4", [hex: :distillery, repo: "hexpm", optional: false]}], "hexpm"},
+  "distillery": {:hex, :distillery, "1.5.3", "b2f4fc34ec71ab4f1202a796f9290e068883b042319aa8c9aa45377ecac8597a", [:mix], [], "hexpm"},
+  "nerves": {:hex, :nerves, "1.2.1", "dade19302ad467ffea775277028c866392465e93f7e2d9323a427c4125e316ff", [:mix], [{:distillery, "~> 1.4", [hex: :distillery, repo: "hexpm", optional: false]}, {:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: true]}], "hexpm"},
+  "shoehorn": {:hex, :shoehorn, "0.3.1", "e4f1db8f25e3e6ccba4ab787a45a3c6968c0cc483d8e55425385becdd101387e", [:mix], [{:distillery, "~> 1.0", [hex: :distillery, repo: "hexpm", optional: false]}], "hexpm"},
 }

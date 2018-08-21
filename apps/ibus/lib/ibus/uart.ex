@@ -57,7 +57,7 @@ defmodule Ibus.UART do
   Handle message from `ExIbus.Reader` combined and working.
   """
   def handle_info({:ex_ibus, _name, data}, state) do
-    # Logger.debug("#{__MODULE__}: Handled data #{inspect(data)}")
+    Logger.debug("#{__MODULE__}: Handled data #{inspect(data)}")
     Ibus.Router.notify(data)
     {:noreply, state}
   end

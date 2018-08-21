@@ -26,7 +26,7 @@ defmodule Ibus.Device.Tel do
   end
   @doc false
   def init(_state) do
-    Ibus.Router.handle(@tel, self())
+    Ibus.Router.subscribe(@tel, self())
     {:ok, []}
   end
 
